@@ -1,6 +1,6 @@
 option solver cplex;
 option show_stats 1;
-option cplex_options 'baropt bardisplay=1 barstart=1 comptol=1e-8 crossover=0'; 
+option cplex_options 'baropt bardisplay=1 barstart=1 comptol=1e-12 crossover=0'; 
 
 #model parameters
 param T;
