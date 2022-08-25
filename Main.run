@@ -1,0 +1,86 @@
+
+reset;
+include modelFile.mod;
+data dataFile.dat;
+
+#going through 20 random network instances
+for {instance in 1..20} {
+
+	#randomly choose five origin-destination pairs
+	let {od in 1..8} choiceOfOD[od] := 1;
+	let delOD1 := round(Uniform(0.501,8.499));
+	let delOD2 := delOD1;
+	let delOD3 := delOD1;
+	repeat while delOD1 = delOD2 {
+		let delOD2 := round(Uniform(0.501,8.499));
+	}
+	repeat while delOD3 = delOD1 or delOD3 = delOD2 {
+		let delOD3 := round(Uniform(0.501,8.499));
+	}
+	let choiceOfOD[delOD1] := 0;
+	let choiceOfOD[delOD2] := 0;
+	let choiceOfOD[delOD3] := 0;
+	
+	#compute incidence matrix A
+	let {i in 1..I} A[i,0] := 0;
+	let count := 0;
+	for {od in 1..8} {
+		if choiceOfOD[od] = 1 then {
+			let count := count + 1;
+			let {i in 1..I} A[i,count] := AallOD[i,od];
+			let {i in 1..I} A[i,count+J/2] := AallOD[i,od];
+		}
+	}
+	
+	#randomly choose fares
+	let f[0] := 0;
+	for {j in 1..J/2} {
+		let f[j] := round(Uniform(9.501,30.499));
+		let f[j+J/2] := round(Uniform(39.501,120.499));
+	}
+	
+	#randomly choose total demands and compute arrival probabilities
+	let {j in 1..J} d[j] := Uniform(0,1);
+	let auxx := sum{j in 1..J} d[j];
+	let {j in 1..J} d[j] := T*d[j]/auxx;
+	let {t in 1..T, j in 1..J} p[t,j] := d[j]/T;
+	let {t in 1..T} p[t,0] := 1-sum{j in 1..J}p[t,j];
+	let {i in 1..I} L[i] := round(Uniform(0.501,c[i]+0.499));
+	
+	#SOLVE LINEAR PROGRAMS
+	solve GdualNR;
+	solve G;
+	
+	#print results
+	printf "\n%s%d\n\n" , 'random network instanceance ' , instance > ./000results.csv;
+	printf "%s\n" , 'legs:' > ./000results.csv;
+	printf "%s,%s,%s,%s\n\n" , 'AC' , 'BC' , 'CD' , 'CE' > ./000results.csv;
+	printf "%s\n" , 'number of nodes L_i:' > ./000results.csv;
+	printf "%d,%d,%d,%d\n\n" , L[1], L[2], L[3], L[4] > ./000results.csv;
+	printf "%s\n" , 'loads:' > ./000results.csv;
+	printf "%.2f,%.2f,%.2f,%.2f\n\n" , load[1], load[2], load[3], load[4] > ./000results.csv;
+	printf "%s\n" , 'chosen origin-destination pairs:' > ./000results.csv;
+	let count := 0;
+	for {od in 1..8} {
+		if choiceOfOD[od] = 1 then {
+			let count := count + 1;
+			printf "%s," , ODpairs[od] > ./000results.csv;
+		}
+	} 
+	printf "\n\n%s\n" , 'incidence matrix A = (a_{ij})_{ij}:' > ./000results.csv;
+	for {i in 1..I} {
+		for {j in 1..J} printf "%d," , A[i,j] > ./000results.csv;
+		printf "\n" > ./000results.csv;
+	}
+	printf "\n%s\n" , 'fares:' > ./000results.csv;
+	for {j in 1..J} printf "%d," , f[j] > ./000results.csv;
+	printf "\n\n%s\n" , 'total demands sum_t p_{tj}:' > ./000results.csv;
+	for {j in 1..J} printf "%.2f," , d[j] > ./000results.csv;
+	printf "\n\n%s,%.3f,%s,%.3f\n\n" , 
+		'Z_G = ' , boundGdualNR , 'overline{Z}_G = ' , boundG > ./000results.csv;
+}
+
+
+
+
+
